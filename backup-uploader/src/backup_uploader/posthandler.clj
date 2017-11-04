@@ -8,6 +8,8 @@
             [clojure.java.io :as io]
             [clojure.core.match :refer [match]]))
 
+(declare obtain-csrf-token)
+
 (defn endpoint-for [host res]
   (str host "/" res))
 
