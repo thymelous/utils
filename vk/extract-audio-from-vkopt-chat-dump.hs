@@ -1,21 +1,20 @@
 #!/usr/bin/env stack
-{- stack --install-ghc --resolver lts-13.21 runghc --package tagsoup --package yaml -}
+{- stack --install-ghc --resolver lts-13.21 runghc --package tagsoup -}
 
-import qualified Data.Yaml as Yaml
-import Data.Yaml (object, (.=))
+import Control.Monad (mapM_)
 import Data.String (fromString)
 import qualified Text.HTML.TagSoup as TS
 import Text.HTML.TagSoup ((~==), (~/=))
 
 main :: IO ()
-main = Yaml.encodeFile "audio.yaml" =<< extractAudioMessages <$> readFile "messages.html"
+main = extractAudioMessages <$> readFile "messages.html" >>= mapM_ (\m ->
+  putStr "." >> appendFile "audio.txt" (show m <> "\n"))
 
 data AudioMessage = AudioMessage
   { audioSender :: String, audioDate :: String, audioUrl :: String }
 
-instance Yaml.ToJSON AudioMessage where
-  toJSON (AudioMessage sender date url) = object
-    [fromString "by" .= sender, fromString "date" .= date, fromString "url" .= url]
+instance Show AudioMessage where
+  show (AudioMessage sender date url) = sender <> " (" <> date <> ")\n" <> url
 
 extractAudioMessages :: String -> [AudioMessage]
 extractAudioMessages html =
