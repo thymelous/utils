@@ -28,6 +28,8 @@ extractAudio message =
   in case skipUntilAttachmentUrl messageBody of
     TS.TagOpen "a" [_, ("href", url)] : TS.TagText "Audio Message" : _ ->
       Just $ AudioMessage { audioSender = sender, audioDate = date, audioUrl = url }
+    TS.TagOpen "a" [_, ("href", url)] : TS.TagText "voice_message.webm" : _ ->
+      Just $ AudioMessage { audioSender = sender, audioDate = date, audioUrl = url }
     _ ->
       Nothing
   where
