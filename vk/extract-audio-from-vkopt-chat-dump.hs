@@ -1,13 +1,26 @@
 #!/usr/bin/env stack
-{- stack --install-ghc --resolver lts-13.21 runghc --package tagsoup -}
+{- stack --install-ghc --resolver lts-13.21 runghc --package tagsoup --package yaml -}
 
+import qualified Data.Yaml as Yaml
+import Data.Yaml (object, (.=))
+import Data.String (fromString)
 import qualified Text.HTML.TagSoup as TS
-import Text.HTML.TagSoup ((~==))
-import Data.List (isPrefixOf)
+import Text.HTML.TagSoup ((~==), (~/=))
+
+main :: IO ()
+main = Yaml.encodeFile "audio.yaml" =<< extractAudioMessages <$> readFile "messages.html"
 
 data AudioMessage = AudioMessage
   { audioSender :: String, audioDate :: String, audioUrl :: String }
-  deriving (Show)
+
+instance Yaml.ToJSON AudioMessage where
+  toJSON (AudioMessage sender date url) = object
+    [fromString "by" .= sender, fromString "date" .= date, fromString "url" .= url]
+
+extractAudioMessages :: String -> [AudioMessage]
+extractAudioMessages html =
+  let htmlMessages = TS.partitions (~== "<div class=from>") $ TS.parseTags html
+  in [m | Just m <- extractAudio <$> htmlMessages]
 
 extractAudio :: [TS.Tag String] -> Maybe AudioMessage
 extractAudio message =
@@ -25,12 +38,4 @@ extractAudio message =
     extractDate (TS.TagText (' ' : date@('2' : _)) : rest) = (date, rest)
     extractDate (_ : rest) = extractDate rest
     extractDate [] = error ("Unable to extract date for message " <> show message)
-    skipUntilAttachmentUrl = dropWhile (TS.~/= "<a>") . dropWhile (TS.~/= "<div class=attacment>") -- attacment is not a typo (not mine at least <.<)
-
-main :: IO ()
-main = do
-  tags <- TS.parseTags <$> readFile "messages.html"
-  let messages = TS.partitions (~== "<div class=from>") tags
-  let audioMessages = [m | Just m <- extractAudio <$> messages]
-
-  putStrLn $ show $ audioMessages
+    skipUntilAttachmentUrl = dropWhile (~/= "<a>") . dropWhile (~/= "<div class=attacment>") -- attacment is not a typo (not mine at least <.<)
